@@ -85,6 +85,14 @@ Rose includes a suite of JavaScript plugins that extend the League Client UI:
 - **Open Source**: Fully open source and extensible
 - **Free**: If you bought this software, you got scammed 💀
 
+This private build embeds one 32-character hexadecimal shared-room key, so only
+copies of this specific build join the group room. Do not publish the source or
+binary: anyone who obtains either can recover the bearer key and join the room.
+Party Mode auto-enables after League is ready and remains enabled while Rose is
+running, retrying relay failures automatically. The existing UI toggle can
+temporarily disable or re-enable it, but the always-on supervisor will restore
+the connection.
+
 ## Requirements
 
 - **Windows 10/11**

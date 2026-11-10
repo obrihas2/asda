@@ -800,6 +800,10 @@ def run_league_unlock(args: Optional[argparse.Namespace] = None,
     # Setup Pengu Loader and injection system (LCU is already connected when WebSocket is active)
     _setup_pengu_and_injection(lcu, injection_manager, activate_pengu=not pengu_active)
 
+    # Party Mode is opt-in in the UI, but the shared-room build joins its
+    # configured room automatically once League and the bridge are ready.
+    t_ui.message_handler.auto_enable_party()
+
     from utils.integration.startup_verifier import StartupInjectionVerifier
     verifier = StartupInjectionVerifier(lcu, state, t_ui.websocket_server, _warn_pengu_injection_failed)
     thread_manager.register("Startup injection verifier", verifier, stop_method=verifier.stop)

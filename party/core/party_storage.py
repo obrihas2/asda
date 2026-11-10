@@ -7,6 +7,7 @@ friends already have keeps working after Rose restarts.
 """
 
 import json
+import re
 import secrets
 from pathlib import Path
 
@@ -17,10 +18,19 @@ log = get_logger()
 
 PARTY_KEYS_FILE = "party_keys.json"
 KEY_SIZE = 32
+SHARED_ROOM_KEY = "7895e232ebf27cdc892439a75a9db1c4"
+_ROOM_KEY_RE = re.compile(r"^[0-9a-f]{32}$")
 
 
 def _keys_path() -> Path:
     return get_user_data_dir() / PARTY_KEYS_FILE
+
+
+def load_shared_room_key() -> str:
+    """Return the private shared room key embedded in this private build."""
+    if not _ROOM_KEY_RE.fullmatch(SHARED_ROOM_KEY):
+        raise RuntimeError("Party Mode shared room key is invalid in this build")
+    return SHARED_ROOM_KEY
 
 
 def load_party_key(summoner_id: int) -> bytes:

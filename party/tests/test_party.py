@@ -55,6 +55,10 @@ class TokenTests(unittest.TestCase):
 
 
 class PartyStorageTests(unittest.TestCase):
+    def test_shared_room_key_is_embedded_and_valid(self):
+        self.assertEqual(party_storage.load_shared_room_key(), party_storage.SHARED_ROOM_KEY)
+        self.assertEqual(len(party_storage.SHARED_ROOM_KEY), 32)
+
     def test_key_is_kept_per_summoner(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             with patch.object(party_storage, "get_user_data_dir", return_value=Path(temp_dir)):
@@ -420,6 +424,7 @@ class MergedMembersTests(unittest.TestCase):
         me = PartyManager(Mock(), make_state())
         me.party_state.my_summoner_id = 1
         me.party_state.enabled = True
+        me._home_room = "a" * 32
         friend = member(2, "B", 11, 11002, removed=[1])  # they removed us too
         relay = SimpleNamespace(members=[member(1, "Me"), friend], connected=True, sent=[], resume=Mock())
 
@@ -430,7 +435,7 @@ class MergedMembersTests(unittest.TestCase):
         asyncio.run(me.remove_peer(2))
 
         token = create_token(summoner_id=2, encryption_key=b"k" * 32).encode()
-        with patch("party.core.party_manager.PEER_WAIT_TIMEOUT", 0.1),                 patch("party.core.party_manager.compute_room_key", return_value="a" * 32):
+        with patch("party.core.party_manager.PEER_WAIT_TIMEOUT", 0.1):
             ok, message = asyncio.run(me.add_peer(token))
 
         # Our side is undone right away; they still have to add us back
@@ -647,7 +652,7 @@ class EnableTwiceTests(unittest.TestCase):
         async def enable_twice():
             return await asyncio.gather(manager.enable(), manager.enable())
 
-        with patch.object(module, "LobbyMatcher", return_value=matcher),                 patch.object(module, "SkinCollector"),                 patch.object(module, "load_party_key", return_value=b"k" * 32),                 patch.object(module, "compute_room_key", return_value="room"):
+        with patch.object(module, "LobbyMatcher", return_value=matcher),                 patch.object(module, "SkinCollector"),                 patch.object(module, "load_party_key", return_value=b"k" * 32),                 patch.object(module, "load_shared_room_key", return_value="room"):
             self.assertEqual(asyncio.run(enable_twice()), ["token", "token"])
         self.assertEqual(joins, ["room"])
         self.assertEqual(len(loops), 2)  # one lobby check and one skin broadcast

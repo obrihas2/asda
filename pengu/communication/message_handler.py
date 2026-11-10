@@ -271,6 +271,61 @@ class MessageHandler:
         self.port = port
         self.mod_storage = mod_storage or ModStorageService()
         self.injection_manager = injection_manager
+        self._party_auto_enable_started = False
+
+    def _ensure_party_manager(self):
+        """Return the shared PartyManager, creating it when League is available."""
+        party_manager = getattr(self.shared_state, "party_manager", None)
+        if party_manager:
+            return party_manager
+
+        from party.core.party_manager import PartyManager
+
+        lcu = self.skin_scraper.lcu if self.skin_scraper else None
+        if not lcu:
+            raise RuntimeError("LCU not available - is League client running?")
+
+        party_manager = PartyManager(lcu, self.shared_state, self.injection_manager)
+        self.shared_state.party_manager = party_manager
+        party_manager.set_callbacks(
+            on_state_change=lambda state: self.broadcaster.broadcast_party_state()
+        )
+        return party_manager
+
+    def auto_enable_party(self) -> None:
+        """Keep Party Mode enabled after startup without blocking Rose's main thread."""
+        if self._party_auto_enable_started:
+            return
+        self._party_auto_enable_started = True
+
+        loop = getattr(self.websocket_server, "loop", None)
+        if loop is None:
+            log.warning("[PARTY] Auto-enable skipped: bridge event loop is not ready")
+            return
+
+        async def do_auto_enable():
+            retry_delay = 1.0
+            while not getattr(self.shared_state, "stop", False):
+                try:
+                    party_manager = self._ensure_party_manager()
+                    if not party_manager.enabled:
+                        token = await party_manager.enable()
+                        self.shared_state.party_mode_enabled = True
+                        self.shared_state.party_token = token
+                        self.broadcaster.broadcast_party_state()
+                        log.info("[PARTY] Party mode auto-enabled")
+                    await party_manager.keep_connected()
+                    retry_delay = 10.0
+                    await asyncio.sleep(retry_delay)
+                except Exception as e:
+                    log.info("[PARTY] Persistent connection retry in %.1fs: %s", retry_delay, e)
+                    await asyncio.sleep(retry_delay)
+                    retry_delay = min(retry_delay * 2.0, 60.0)
+
+        try:
+            asyncio.run_coroutine_threadsafe(do_auto_enable(), loop)
+        except RuntimeError as e:
+            log.warning("[PARTY] Could not schedule startup enable: %s", e)
 
     def _is_valid_local_league_path(self, game_path: str) -> bool:
         """Validate a League install path without touching UNC/network paths."""
@@ -3445,28 +3500,7 @@ class MessageHandler:
     def _handle_party_enable(self, payload: dict) -> None:
         """Handle party mode enable request"""
         try:
-            party_manager = getattr(self.shared_state, 'party_manager', None)
-            if not party_manager:
-                # Initialize party manager
-                from party.core.party_manager import PartyManager
-                from lcu import LCU
-
-                # Get LCU instance from skin_scraper
-                lcu = self.skin_scraper.lcu if self.skin_scraper else None
-                if not lcu:
-                    response_payload = {
-                        "type": "party-enabled",
-                        "success": False,
-                        "error": "LCU not available - is League client running?",
-                    }
-                    self._send_response(json.dumps(response_payload))
-                    return
-
-                party_manager = PartyManager(lcu, self.shared_state, self.injection_manager)
-                self.shared_state.party_manager = party_manager
-                party_manager.set_callbacks(
-                    on_state_change=lambda state: self.broadcaster.broadcast_party_state()
-                )
+            party_manager = self._ensure_party_manager()
 
             # Enable party mode (async operation)
             import asyncio

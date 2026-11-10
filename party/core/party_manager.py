@@ -4,11 +4,9 @@
 Party Manager
 Orchestrator for party mode skin sharing via WebSocket relay.
 
-Everyone keeps their own room open and also joins the rooms of the friends
-whose token they paste. Members advertise the rooms they're in, so everyone
-linked to a party ends up in all of its rooms: any member's token works,
-friends can be added one by one, and older Rose versions (one room each)
-still see everybody.
+All members use one private shared relay room. Tokens remain available for
+identifying and adding a peer, but no token exchange is required when every
+member has configured the same shared room key.
 """
 
 import asyncio
@@ -21,14 +19,14 @@ from state import SharedState
 from utils.core.i18n import Text
 from utils.core.logging import get_logger
 
-from ..network.ws_relay import PartyRelay, compute_room_key
+from ..network.ws_relay import PartyRelay
 from ..protocol.token_codec import PartyToken, create_token
 from ..protocol.message_types import SkinSelection
 from ..discovery.custom_mods import saved_mod_hashes
 from ..discovery.lobby_matcher import LobbyMatcher
 from ..discovery.skin_collector import SkinCollector, PartySkinData
 from .party_state import PartyState
-from .party_storage import load_party_key
+from .party_storage import load_party_key, load_shared_room_key
 
 log = get_logger()
 
@@ -149,9 +147,9 @@ class PartyManager:
             self.party_state.my_summoner_id = my_summoner_id
             self.party_state.my_summoner_name = my_summoner_name
 
-            # Same key every session, so the token friends already have keeps working
+            # Keep the per-account key stable so existing tokens remain decodable.
             self._my_key = load_party_key(my_summoner_id)
-            self._home_room = compute_room_key(my_summoner_id, self._my_key)
+            self._home_room = load_shared_room_key()
             self._running = True
 
             error = await self._join_room(self._home_room)
@@ -232,7 +230,9 @@ class PartyManager:
             self._ignored_peers.discard(token.summoner_id)
             self._refresh_peers()
             await self._publish_state()
-        room_key = compute_room_key(token.summoner_id, token.encryption_key)
+        # The token still authenticates the peer identity and remains backward
+        # compatible, but all modified clients join the configured private room.
+        room_key = self._home_room
 
         if room_key in self._relays:
             self._relays[room_key].resume()
@@ -575,6 +575,16 @@ class PartyManager:
         """Reconnect the rooms we stopped reconnecting to (see PartyRelay._run)."""
         for relay in list(self._relays.values()):
             relay.resume()
+
+    async def keep_connected(self):
+        """Ensure the shared room exists and resume any stopped relay connection."""
+        if not self.party_state.enabled or not self._running:
+            return
+        if self._home_room and self._home_room not in self._relays:
+            error = await self._join_room(self._home_room)
+            if error:
+                raise RuntimeError(error)
+        self._resume_rooms()
 
     def _selection_is_final(self) -> bool:
         collector = self._skin_collector
