@@ -50,6 +50,16 @@ dashboard; raw activity and server credentials remain private.
 
 - **rose-party-relay**: Durable Object-backed WebSocket relay that manages party rooms (max 10 members per room) for real-time skin selection broadcasting between friends. It refuses Rose versions older than 1.4.4
 
+#### Private Party relay setup
+
+The private Party build needs a relay URL, but it does not require hosting on a personal IP address. Create a Cloudflare account, install Node.js LTS, then run this from the repository root:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\setup_party_relay.ps1
+```
+
+The script installs the Worker dependencies, opens Cloudflare login, deploys `relay-worker`, verifies its health endpoint, and writes the local ignored file `party/network/relay_config.py`. Approve the browser login yourself; never paste Cloudflare tokens into chat. Cloudflare plan limits and billing requirements can change, so enable usage/billing alerts in the Cloudflare dashboard before deployment.
+
 ### Pengu Loader Plugins
 
 Rose includes a suite of JavaScript plugins that extend the League Client UI:
