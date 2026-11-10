@@ -18,7 +18,7 @@ if sys.version_info < MIN_PYTHON:
     )
 
 
-LTK_MANAGER_DOWNLOAD_URL = "https://obrihas2.github.io/asda/releases"
+LTK_MANAGER_DOWNLOAD_URL = "https://github.com/LeagueToolkit/ltk-manager/releases"
 
 
 def _dll_dialog_text(reason: str, detail: str = ""):

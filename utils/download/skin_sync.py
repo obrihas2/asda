@@ -43,7 +43,7 @@ from . import github_rate_limit
 
 log = get_logger()
 
-REPO = "obrihas2/asda"
+REPO = "Alban1911/LeagueSkins"
 MANIFEST_URL = f"https://raw.githubusercontent.com/{REPO}/manifest/manifest.json"
 RAW_BASE = f"https://raw.githubusercontent.com/{REPO}"
 TREE_API_URL = f"https://api.github.com/repos/{REPO}/git/trees/main?recursive=1"
