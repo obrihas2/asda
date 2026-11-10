@@ -24,6 +24,15 @@ PERSISTENT_ROOT_FILES = ("icon.ico", "unins000.exe", "unins000.dat")
 # In frozen builds, files are under _internal/
 PERSISTENT_USER_FILES = ()
 
+# Private-build files that must not be replaced by an upstream Rose release.
+# They are copied into the staged payload before the normal update mirror runs.
+PROTECTED_PARTY_FILES = (
+    "_internal/party",
+    "_internal/main/__init__.py",
+    "_internal/pengu/communication/message_handler.py",
+    "_internal/Pengu Loader/plugins/ROSE-PartyMode",
+)
+
 # Copies the update over the install once Rose has exited, then starts it
 # again. Its paths come in as environment variables (see install). robocopy
 # retries a locked file 1,000,000 times 30s apart by default, which left the
@@ -73,6 +82,34 @@ class UpdateInstaller:
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def _preserve_paths(
+        install_dir: Path,
+        extracted_root: Path,
+        relative_paths: tuple[str, ...],
+        status_callback: Callable[[str], None],
+    ) -> bool:
+        """Copy protected paths into the staged payload, failing closed."""
+        for relative_name in relative_paths:
+            source_path = install_dir / Path(relative_name)
+            if not source_path.exists():
+                status_callback(f"Update aborted: protected path is missing: {relative_name}")
+                updater_log.error("Protected update path is missing: %s", relative_name)
+                return False
+            target_path = extracted_root / Path(relative_name)
+            try:
+                if source_path.is_dir():
+                    shutil.copytree(source_path, target_path, dirs_exist_ok=True)
+                else:
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(source_path, target_path)
+                updater_log.info("Preserved protected update path: %s", relative_name)
+            except Exception as exc:  # noqa: BLE001
+                status_callback(f"Update aborted: failed to preserve {relative_name}: {exc}")
+                updater_log.error("Failed to preserve protected update path %s: %s", relative_name, exc)
+                return False
+        return True
 
     def extract_update(
         self,
@@ -171,6 +208,16 @@ class UpdateInstaller:
             except Exception as exc:  # noqa: BLE001
                 status_callback(f"Warning: failed to preserve {relative_name}: {exc}")
                 updater_log.warning(f"Failed to preserve user file {relative_name}: {exc}")
+
+        # Preserve the private Party Mode implementation while allowing the
+        # rest of the upstream release to be installed normally.
+        if not self._preserve_paths(
+            install_dir,
+            extracted_root,
+            PROTECTED_PARTY_FILES,
+            status_callback,
+        ):
+            return False
 
         batch_path = updates_root / "apply_update.bat"
         log_path = updates_root / "update.log"
