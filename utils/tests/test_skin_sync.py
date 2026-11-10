@@ -347,7 +347,7 @@ class ReleaseCheckTests(unittest.TestCase):
 
     def test_the_latest_release_comes_from_the_redirect(self):
         def head(url, **kwargs):
-            self.assertEqual(url, "https://obrihas2/asda/releases/download/1.5.2/update_package_1.5.2.zip")
+            self.assertEqual(url, "https://github.com/obrihas2/asda/releases/download/1.5.2/update_package_1.5.2.zip")
             return FakeResponse(200, headers={"Content-Length": "35066861"})
 
         redirect = FakeResponse(302, headers={"Location": "https://obrihas2/asda/releases/tag/1.5.2"})

