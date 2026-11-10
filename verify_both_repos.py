@@ -3,14 +3,19 @@ import urllib.request
 import json
 import os
 
-token = os.environ.get('GITHUB_TOKEN', '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')
+# Get token from environment variable
+token = os.environ.get('GITHUB_TOKEN')
 
-repos = ['obrihas2/asda', 'obrihas2/asda']
+repos = ['obrihas2/asda']
 
 for repo in repos:
     print("=" * 60)
     print(f"CHECKING {repo}")
     print("=" * 60)
+    if not token:
+        print('WARNING: GITHUB_TOKEN not set, skipping release check')
+        continue
+    
     req = urllib.request.Request(f'https://api.github.com/repos/{repo}/releases?per_page=100')
     req.add_header('User-Agent', 'RoseReleaseTool')
     req.add_header('Authorization', f'token {token}')
